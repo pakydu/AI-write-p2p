@@ -1,0 +1,112 @@
+#include "p2p_handler.hpp"
+
+enum class P2PStrategy {
+    DIRECT_CONNECT,    // 全锥型NAT直连
+    PORT_PREDICTION,   // 端口限制型预测
+    RELAY_SERVER       // 对称型使用中继
+};
+
+void P2PHandler::startPenetration(const std::string& peerIP, uint16_t peerPort) {
+        switch(strategy) {
+            case P2PStrategy::DIRECT_CONNECT:
+                establishDirect(peerIP, peerPort);
+                break;
+            // 其他策略实现...
+        }
+
+	// 	switch (this->natType) {
+    //     case NatType::FULL_CONE:
+    //         // 直接连接对端公网地址
+    //         connectDirect(peerIP, peerPort);
+    //         break;
+    //     case NatType::RESTRICTED:
+    //     case NatType::PORT_RESTRICTED:
+    //         // 需要先通过STUN服务器激活通道
+    //         activateThroughSTUN(peerIP, peerPort);
+    //         break;
+    //     case NatType::SYMMETRIC:
+    //         // 必须使用中继服务器
+    //         useRelayServer(peerIP, peerPort);
+    //         break;
+    //     default:
+    //         throw std::runtime_error("Unsupported NAT type");
+    // }
+    }
+P2PStrategy P2PHandler::selectStrategy(NatType type) {
+        if(type == NatType::FULL_CONE) return P2PStrategy::DIRECT_CONNECT;
+        if(type == NatType::SYMMETRIC) return P2PStrategy::RELAY_SERVER;
+        return P2PStrategy::PORT_PREDICTION;
+	}
+
+	void P2PHandler::establishDirect(const std::string &ip, uint16_t port)
+	{
+		try
+		{
+			// 创建非阻塞UDP socket
+			int sock = client.create_socket();
+			fcntl(sock, F_SETFL, O_NONBLOCK);
+
+			// 1. 双向发送探测包
+			// 构造穿透握手协议头
+			constexpr uint8_t PROBE_HEADER[4] = {0x50, 0x32, 0x50, 0x1A}; // "P2P\x1A"
+
+			// 发送本地探测包（连续发送5次确保穿透）
+			for (int i = 0; i < 5; ++i)
+			{
+				sendto(sock, PROBE_HEADER, sizeof(PROBE_HEADER), 0,
+					   (struct sockaddr *)&peer_addr, sizeof(peer_addr));
+				std::this_thread::sleep_for(100ms);
+			}
+
+			// 2. NAT绑定维护（心跳机制）
+			std::atomic_bool keep_alive{true};
+			auto heartbeat_thread = std::thread([&]
+												{  
+                constexpr uint8_t HEARTBEAT_HEADER[4] = {0x50, 0x32, 0x50, 0x1B};  
+                while(keep_alive) {  
+                    sendto(sock, HEARTBEAT_HEADER, sizeof(HEARTBEAT_HEADER), 0,  
+                          (struct sockaddr*)&peer_addr, sizeof(peer_addr));  
+                    std::this_thread::sleep_for(25s); // 保持25秒间隔  
+                } });
+
+			// 3. 建立连接回调
+			auto on_success = [](int connected_sock)
+			{
+				std::cout << "P2P通道建立成功！Socket: " << connected_sock << std::endl;
+				// 此处添加实际的数据处理逻辑
+			};
+
+			// 接收响应验证穿透
+			struct timeval tv{.tv_sec = 10, .tv_usec = 0}; // 10秒超时
+			setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+			char buffer[128];
+			while (true)
+			{
+				ssize_t len = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
+				if (len < 0)
+				{
+					if (errno == EAGAIN || errno == EWOULDBLOCK)
+					{
+						throw std::runtime_error("穿透超时：未收到对方响应");
+					}
+					continue;
+				}
+
+				// 验证协议头
+				if (len >= 4 && memcmp(buffer, PROBE_HEADER, 4) == 0)
+				{
+					keep_alive = false;
+					heartbeat_thread.join();
+					on_success(sock);
+					return;
+				}
+			}
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << "穿透失败: " << e.what() << std::endl;
+			close(sock);
+			throw;
+		}
+	}

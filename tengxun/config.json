@@ -1,0 +1,9 @@
+{
+    "stun_servers": [
+        {"host": "stun.l.google.com", "port": 19302},
+        {"host": "stun.voipbuster.com", "port": 3478}
+    ],
+    "detection_timeout": 2000,
+    "max_retries": 3,
+    "port_samples": 5
+}
