@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 message(STATUS "${PROJECT_SOURCE_DIR}")
 
+add_compile_options(-Wall -o0 -g)
+
 add_executable(p2p-client
     src/stu_client.cpp
     src/nat_detection.cpp
