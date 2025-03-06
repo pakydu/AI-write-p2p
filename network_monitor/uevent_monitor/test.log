@@ -1,0 +1,175 @@
+uis7885_2h10:/home/android # ./uevent_monitor
+
+
+
+
+
+
+[UEVENT]:remove@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1/mmcblk1p1
+        [INFO]: ACTION=remove
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1/mmcblk1p1
+        -------------------------------
+        [INFO]: SUBSYSTEM=block
+        -------------------------------
+        [INFO]: MAJOR=179
+        -------------------------------
+        [INFO]: MINOR=1
+        -------------------------------
+        [INFO]: DEVNAME=mmcblk1p1
+        -------------------------------
+        [INFO]: DEVTYPE=partition
+        -------------------------------
+        [INFO]: PARTN=1
+        -------------------------------
+        [INFO]: SEQNUM=6219
+        -------------------------------
+
+[UEVENT]:remove@/devices/virtual/bdi/179:0
+        [INFO]: ACTION=remove
+        -------------------------------
+        [INFO]: DEVPATH=/devices/virtual/bdi/179:0
+        -------------------------------
+        [INFO]: SUBSYSTEM=bdi
+        -------------------------------
+        [INFO]: SEQNUM=6220
+        -------------------------------
+
+[UEVENT]:remove@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1
+        [INFO]: ACTION=remove
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1
+        -------------------------------
+        [INFO]: SUBSYSTEM=block
+        -------------------------------
+        [INFO]: MAJOR=179
+        -------------------------------
+        [INFO]: MINOR=0
+        -------------------------------
+        [INFO]: DEVNAME=mmcblk1
+        -------------------------------
+        [INFO]: DEVTYPE=disk
+        -------------------------------
+        [INFO]: SEQNUM=6221
+        -------------------------------
+
+[UEVENT]:unbind@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        [INFO]: ACTION=unbind
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        -------------------------------
+        [INFO]: SUBSYSTEM=mmc
+        -------------------------------
+        [INFO]: MMC_TYPE=SD
+        -------------------------------
+        [INFO]: MMC_NAME=LX128
+        -------------------------------
+        [INFO]: SEQNUM=6222
+        -------------------------------
+
+[UEVENT]:remove@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        [INFO]: ACTION=remove
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        -------------------------------
+        [INFO]: SUBSYSTEM=mmc
+        -------------------------------
+        [INFO]: MMC_TYPE=SD
+        -------------------------------
+        [INFO]: MMC_NAME=LX128
+        -------------------------------
+        [INFO]: MODALIAS=mmc:block
+        -------------------------------
+        [INFO]: SEQNUM=6223
+        -------------------------------
+
+
+
+
+
+[UEVENT]:add@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        [INFO]: ACTION=add
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        -------------------------------
+        [INFO]: SUBSYSTEM=mmc
+        -------------------------------
+        [INFO]: MMC_TYPE=SD
+        -------------------------------
+        [INFO]: MMC_NAME=LX128
+        -------------------------------
+        [INFO]: MODALIAS=mmc:block
+        -------------------------------
+        [INFO]: SEQNUM=6224
+        -------------------------------
+
+[UEVENT]:add@/devices/virtual/bdi/179:0
+        [INFO]: ACTION=add
+        -------------------------------
+        [INFO]: DEVPATH=/devices/virtual/bdi/179:0
+        -------------------------------
+        [INFO]: SUBSYSTEM=bdi
+        -------------------------------
+        [INFO]: SEQNUM=6225
+        -------------------------------
+
+[UEVENT]:add@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1
+        [INFO]: ACTION=add
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1
+        -------------------------------
+        [INFO]: SUBSYSTEM=block
+        -------------------------------
+        [INFO]: MAJOR=179
+        -------------------------------
+        [INFO]: MINOR=0
+        -------------------------------
+        [INFO]: DEVNAME=mmcblk1
+        -------------------------------
+        [INFO]: DEVTYPE=disk
+        -------------------------------
+        [INFO]: SEQNUM=6226
+        -------------------------------
+
+[UEVENT]:add@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1/mmcblk1p1
+        [INFO]: ACTION=add
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4/block/mmcblk1/mmcblk1p1
+        -------------------------------
+        [INFO]: SUBSYSTEM=block
+        -------------------------------
+        [INFO]: MAJOR=179
+        -------------------------------
+        [INFO]: MINOR=1
+        -------------------------------
+        [INFO]: DEVNAME=mmcblk1p1
+        -------------------------------
+        [INFO]: DEVTYPE=partition
+        -------------------------------
+        [INFO]: PARTN=1
+        -------------------------------
+        [INFO]: SEQNUM=6227
+        -------------------------------
+
+[UEVENT]:bind@/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        [INFO]: ACTION=bind
+        -------------------------------
+        [INFO]: DEVPATH=/devices/platform/soc/soc:ap-ahb/22210000.sdio/mmc_host/mmc1/mmc1:59b4
+        -------------------------------
+        [INFO]: SUBSYSTEM=mmc
+        -------------------------------
+        [INFO]: DRIVER=mmcblk
+        -------------------------------
+        [INFO]: MMC_TYPE=SD
+        -------------------------------
+        [INFO]: MMC_NAME=LX128
+        -------------------------------
+        [INFO]: MODALIAS=mmc:block
+        -------------------------------
+        [INFO]: SEQNUM=6228
+        -------------------------------
+
+
+
+
+
