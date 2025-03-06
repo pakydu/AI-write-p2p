@@ -8,6 +8,7 @@ set(TOP_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 # 设置子目录
 add_subdirectory(cJson)
 add_subdirectory(rt_monitor)
+add_subdirectory(uevent_monitor)
 
 
 # 可选：设置交叉编译工具链（如果需要）
