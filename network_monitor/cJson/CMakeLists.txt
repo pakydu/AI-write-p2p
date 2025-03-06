@@ -26,6 +26,9 @@ set(LIBRARY_OUTPUT_PATH  ${TOP_OUTPUT_DIRECTORY}/lib)
 target_include_directories(cJSON_static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(cJSON_shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
+endif()
 string(TOLOWER ${CMAKE_BUILD_TYPE} BUILD_TYPE_LOWER)
 if(BUILD_TYPE_LOWER MATCHES "^(Release|release)$")
         # 共享库：移除所有非必要符号

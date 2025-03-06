@@ -16,6 +16,8 @@
 #define MAX_RT_TABLE_ENTRIES 64
 #define RT_TABLES_PATH "/etc/iproute2/rt_tables"
 
+#define IPV4_ZERO_STR "0.0.0.0"
+
 //record the interface status which will be used to compare the status changed.
 typedef struct if_stat_record {
     char if_name[64];

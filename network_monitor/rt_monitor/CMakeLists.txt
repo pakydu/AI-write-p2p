@@ -20,6 +20,9 @@ set(EXECUTABLE_OUTPUT_PATH ${TOP_OUTPUT_DIRECTORY}/bin)
 
 add_executable(rt_monitor ${SRC_LIST})
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build." FORCE)
+endif()
 string(TOLOWER ${CMAKE_BUILD_TYPE} BUILD_TYPE_LOWER)
 if(BUILD_TYPE_LOWER MATCHES "^(Release|release)$")
         # 共享库：移除所有非必要符号
@@ -27,7 +30,7 @@ if(BUILD_TYPE_LOWER MATCHES "^(Release|release)$")
             COMMAND ${CMAKE_STRIP} --strip-unneeded $<TARGET_FILE:rt_monitor>
             COMMENT "Stripping symbols from shared library (Release mode)"
         )
-        
+
         # 静态库：默认保留符号，如需移除调试符号可取消注释
         # add_custom_command(TARGET cJSON_static POST_BUILD
         #     COMMAND ${CMAKE_STRIP} --strip-debug $<TARGET_FILE:cJSON_static>

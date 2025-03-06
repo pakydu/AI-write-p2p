@@ -31,9 +31,10 @@ int g_log_level = LOG_DEBUG;
 
 // ## 配置文件：
 // 提高main 和 default 在rule列表的优先级，使数据优先使用它们进行路由引流
+// Note: 30000 is the higher priority than sipa_eth0/eth0 defult rule.
 static const char *default_cfg_content = "{\"desc\":\"用于配置android的路由规则优先级。比如有线网络>wifi>5G\", \
-	\"rt_rules\":[{\"name\":\"main\",\"id\": 254, \"priority\":100}, \
-		{\"name\":\"default\",\"id\": 253, \"priority\":101} \
+	\"rt_rules\":[{\"name\":\"main\",\"id\": 254, \"priority\":30000}, \
+		{\"name\":\"default\",\"id\": 253, \"priority\":30001} \
 	], \
 	\"entries\":[{\"name\":\"eth0\",\"metric\": 50, \"mac_type\":1, \"ip_type\":4}, \
 		{\"name\":\"eth1\",\"metric\": 51, \"mac_type\":1, \"ip_type\":4},  \
@@ -204,8 +205,8 @@ int main(int argc, char *argv[]) {
 					rt_items[i].ip_type = AF_INET;
 				else
 					rt_items[i].ip_type = AF_INET6;
-				strcpy(rt_items[i].gw_ip, "0.0.0.0");
-				strcpy(rt_items[i].des_ip, "0.0.0.0");
+				strcpy(rt_items[i].gw_ip, IPV4_ZERO_STR);
+				strcpy(rt_items[i].des_ip, IPV4_ZERO_STR);
 			}
 		}
 		cJSON_Delete(pJson);

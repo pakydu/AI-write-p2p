@@ -12,11 +12,10 @@
 #include <arpa/inet.h>
 #include <linux/fib_rules.h>
 #include <stdarg.h>
-#include "handle_ip_route.h"
-
-#ifdef NDEBUG
 #include <syslog.h>
-#endif
+#include <sys/ioctl.h>
+
+#include "handle_ip_route.h"
 
 extern int g_log_level;
 
@@ -86,6 +85,7 @@ static void add_attr(struct nlmsghdr *nh, size_t maxlen, int type, const void *d
 static void send_netlink_request(struct nlmsghdr *nh);
 static void parse_attributes(struct rtattr *attrs[], int max, struct rtattr *rta, int len);
 static void print_ip(int family, void *addr);
+static void update_mobile_mask(const route_entry_t *item, route_entry_t *items, int index, int mask_len);
 
 /**
  * @brief 初始化路由表映射
@@ -205,6 +205,70 @@ static void send_netlink_request(struct nlmsghdr *nh) {
     
     sendto(fd, nh, nh->nlmsg_len, 0, (struct sockaddr*)&sa, sizeof(sa));
     close(fd);
+}
+
+
+int get_ip_by_ifname(const char *ifname, char* ip_buf, int type)
+{
+	if (ifname == NULL || ip_buf == NULL)
+		return 0;
+
+	// const char *address = NULL;
+	struct ifreq ifr;
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+
+	if (type == AF_INET)
+	{
+		struct sockaddr_in *addr;
+		int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		if (ioctl(sockfd, SIOCGIFADDR, &ifr) == -1)
+		{
+			perror("ioctl error");
+			close(sockfd);
+			return 0;
+		}
+
+		addr = (struct sockaddr_in *)&(ifr.ifr_addr);
+		// address = inet_ntoa(addr->sin_addr);
+
+		char str[INET_ADDRSTRLEN] = {0};
+		inet_ntop(AF_INET, &(addr->sin_addr), str, sizeof(str));
+		// printf("inet addr: %s\n", address);
+		close(sockfd);
+
+		if (strlen(str) == 0)
+			strcpy(ip_buf, IPV4_ZERO_STR);
+		else
+			strcpy(ip_buf, str);
+		return 1;
+	}
+	else if (type == AF_INET6) //not support.
+	{
+		struct sockaddr_in6  *addr;
+		int sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
+		if (ioctl(sockfd, SIOCGIFADDR, &ifr) == -1)
+		{
+			perror("ioctl error");
+			close(sockfd);
+			return 0;
+		}
+
+		addr = (struct sockaddr_in6 *)&(ifr.ifr_addr);
+		// address = inet_ntoa(addr->sin_addr);
+
+		char str[INET6_ADDRSTRLEN] = {0};
+		inet_ntop(AF_INET6, &(addr->sin6_addr), str, sizeof(str));
+		// printf("inet6 addr: %s\n", address);
+		close(sockfd);
+
+		if (strlen(str) == 0)
+			strcpy(ip_buf, "::0");
+		else
+			strcpy(ip_buf, str);
+		return 1;
+	}
+
+	return 0;
 }
 
 /**
@@ -489,15 +553,23 @@ void handle_route_event(struct nlmsghdr *nlh, route_entry_t *rt_items, int rt_le
 #endif
 
 	//debug:
-	log_message(LOG_INFO,"\n[ROUTE] %s for %s:\n", action, ifname);
+	// 计算IPv4子网掩码
+	if (rt->rtm_family == AF_INET) {
+		uint32_t netmask = 0;
+		if (rt->rtm_dst_len) {
+			netmask = htonl(~((1 << (32 - rt->rtm_dst_len)) - 1));
+		}
+		inet_ntop(AF_INET, &netmask, mask, sizeof(mask));
+	}
+	log_message(LOG_INFO,"\n[ROUTE Event] %s for %s:\n", action, ifname);
 	log_message(LOG_INFO,"\tFamily: %s\n", (rt->rtm_family == AF_INET) ? "IPv4" : "IPv6");
-	log_message(LOG_INFO,"\tDestination: %s\n", dst[0] ? dst : "0.0.0.0");
+	log_message(LOG_INFO,"\tDestination: %s/%d\n", dst[0] ? dst : IPV4_ZERO_STR, rt->rtm_dst_len);
 	log_message(LOG_INFO,"\tRoute_type: %s\n", route_type);
 	log_message(LOG_INFO,"\tSrc: %s\n", src);
 	//log_message(LOG_INFO,"\tPri: %d\n", metric);
 	log_message(LOG_INFO,"\tTable_id: %d\n", table_id);
 	log_message(LOG_INFO,"\tNetmask: %s\n", mask);
-	log_message(LOG_INFO,"\tGateway: %s\n", gateway[0] ? gateway : "0.0.0.0");
+	log_message(LOG_INFO,"\tGateway: %s\n", gateway[0] ? gateway : IPV4_ZERO_STR);
 	log_message(LOG_INFO,"\tInterface Index: %d (%s)\n\n", ifindex, ifname);
 				
 
@@ -509,14 +581,19 @@ void handle_route_event(struct nlmsghdr *nlh, route_entry_t *rt_items, int rt_le
 				strcpy(item.name, ifname);
 				item.rt_id = table_id;
 				item.ip_type = rt->rtm_family;
-				strcpy(item.des_ip, dst[0] ? dst : "0.0.0.0");
-				strcpy(item.gw_ip, gateway[0] ? gateway : "0.0.0.0");
+				strcpy(item.des_ip, dst[0] ? dst : IPV4_ZERO_STR);
+				strcpy(item.gw_ip, gateway[0] ? gateway : IPV4_ZERO_STR);
 				//item.metric = metric;
 				update_rt_main(&item, rt_items, i);
+
+				update_mobile_mask(&item, rt_items, i, rt->rtm_dst_len/*mask_len*/);
+				break;
 			}
 		}
 	}
 }
+
+
 
 /**
  * @brief 添加路由规则优先级
@@ -626,8 +703,8 @@ int update_rt_main(const route_entry_t *item, route_entry_t *items, int index)
 
 	//log_message(LOG_INFO,"ifname:%s, Destination: %s, gw_ip:%s\n", item->name, item->des_ip, item->gw_ip);
 
-	if (strcmp(item->des_ip, "0.0.0.0") == 0) {
-		if (strcmp(item->gw_ip, "0.0.0.0") == 0) {
+	if (strcmp(item->des_ip, IPV4_ZERO_STR) == 0) {
+		if (strcmp(item->gw_ip, IPV4_ZERO_STR) == 0) {
 			// 1. 如果gw为 0.0.0.0 --> 直接使用接口名称添加 ip route add default dev eth0 pri 50 table main
 			snprintf(cmd_buf, sizeof(cmd_buf), "ip route add default dev %s pri %d table main\n", items[index].name, items[index].metric);
 			system(cmd_buf);
@@ -646,6 +723,41 @@ int update_rt_main(const route_entry_t *item, route_entry_t *items, int index)
 		ret = -2;
 	}
 
+}
+
+
+//handle special case: for the mobile interface, we should change the network mask to bigger than 24.
+static void update_mobile_mask(const route_entry_t *item, route_entry_t *items, int index, int mask_len)
+{
+	/*
+	[ROUTE Event] added for sipa_eth0:
+		Family: IPv4
+		Destination: 10.0.0.0/8
+		Route_type: unicast
+		Src:
+		Table_id: 254
+		Netmask: 255.0.0.0
+		Gateway: 0.0.0.0
+		Interface Index: 15 (sipa_eth0)
+	*/
+	if (item->rt_id == 254 && items[index].mac_type == MAC_MOBILE) {
+		if (strcmp(item->gw_ip, IPV4_ZERO_STR) == 0
+			&& strcmp(item->des_ip, IPV4_ZERO_STR) != 0
+			&& mask_len < 16) {
+				char cmd_buf[128] = {0};
+				char tmp_ip[64] = {0};
+				#if 0
+				if(get_ip_by_ifname(items[i].name, tmp_ip, AF_INET) == 0) {
+					snprintf(cmd_buf, sizeof(cmd_buf), "ifconfig %s %s/24 up\n", items[i].name, tmp_ip);
+					system(cmd_buf);
+				}
+				#else
+				snprintf(cmd_buf, sizeof(cmd_buf), "ifconfig %s netmask 255.255.255.0\n", items[index].name);
+				system(cmd_buf);
+				#endif
+				log_message(LOG_NOTICE,"update the dev:%s ip address. cmd=%s\n", items[index].name, cmd_buf);
+		}
+	}
 }
 
 // 新增路由表获取函数
@@ -781,12 +893,12 @@ int init_route_table(route_entry_t *rt_items, int rt_len, int family)
 				// 打印路由信息
 				log_message(LOG_INFO,"\n[Route %d]\n", ++count);
 				log_message(LOG_INFO,"\tFamily: %s\n", (rtm->rtm_family == AF_INET) ? "IPv4" : "IPv6");
-				log_message(LOG_INFO,"\tDestination: %s/%d\n", dst[0] ? dst : "0.0.0.0", rtm->rtm_dst_len);
+				log_message(LOG_INFO,"\tDestination: %s/%d\n", dst[0] ? dst : IPV4_ZERO_STR, rtm->rtm_dst_len);
 				log_message(LOG_INFO,"\tSrc: %s/%d\n", src, rtm->rtm_dst_len);
 				log_message(LOG_INFO,"\tPri: %d\n", metric);
 				log_message(LOG_INFO,"\ttable_id: %d\n", table_id);
 				log_message(LOG_INFO,"\tNetmask: %s\n", mask);
-				log_message(LOG_INFO,"\tGateway: %s\n", gateway[0] ? gateway : "0.0.0.0");
+				log_message(LOG_INFO,"\tGateway: %s\n", gateway[0] ? gateway : IPV4_ZERO_STR);
 				log_message(LOG_INFO,"\tInterface Index: %d (%s)\n\n", ifindex, if_indextoname(ifindex, ifname) ? ifname : "unknown");
 				
 				//update the rt_entry：
@@ -796,10 +908,13 @@ int init_route_table(route_entry_t *rt_items, int rt_len, int family)
 						strcpy(item.name, ifname);
 						item.rt_id = table_id;
 						item.ip_type = rtm->rtm_family;
-						strcpy(item.des_ip, dst[0] ? dst : "0.0.0.0");
-						strcpy(item.gw_ip, gateway[0] ? gateway : "0.0.0.0");
+						strcpy(item.des_ip, dst[0] ? dst : IPV4_ZERO_STR);
+						strcpy(item.gw_ip, gateway[0] ? gateway : IPV4_ZERO_STR);
 						item.metric = metric;
 						update_rt_main(&item, rt_items, i);
+
+						update_mobile_mask(&item, rt_items, i, rtm->rtm_dst_len/*mask_len*/);
+						break;
 					}
 				}
 			}
