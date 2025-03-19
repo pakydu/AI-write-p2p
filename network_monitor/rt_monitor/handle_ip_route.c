@@ -634,6 +634,174 @@ void add_rule_table_priority(int table, int priority) {
     send_netlink_request(&req.nh);
 }
 
+int set_ip_address(const char *ifname, const char *ip, int prefix_len) {
+    int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (sock < 0) {
+        perror("socket");
+        return -1;
+    }
+
+    struct {
+        struct nlmsghdr nh;
+        struct ifaddrmsg ifa;
+        char buf[256];
+    } req;
+
+    memset(&req, 0, sizeof(req));
+
+    // 初始化Netlink消息头
+    req.nh.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+    req.nh.nlmsg_type = RTM_NEWADDR; // 添加IP地址
+    req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+
+    // 初始化ifaddrmsg
+    req.ifa.ifa_family = AF_INET; // IPv4
+    req.ifa.ifa_prefixlen = prefix_len;
+    req.ifa.ifa_index = if_nametoindex(ifname); // 获取接口索引
+    if (!req.ifa.ifa_index) {
+        perror("if_nametoindex");
+        close(sock);
+        return -1;
+    }
+    req.ifa.ifa_scope = RT_SCOPE_UNIVERSE;
+
+    // 添加IP地址属性
+    struct rtattr *rta = (struct rtattr *)(((char *)&req) + NLMSG_ALIGN(req.nh.nlmsg_len));
+    rta->rta_type = IFA_LOCAL;
+    rta->rta_len = RTA_LENGTH(4); // IPv4 地址长度为4字节
+    inet_pton(AF_INET, ip, RTA_DATA(rta)); // 将IP地址转换为二进制形式
+
+    req.nh.nlmsg_len = NLMSG_ALIGN(req.nh.nlmsg_len) + RTA_LENGTH(4);
+
+    // 发送Netlink消息
+    struct sockaddr_nl sa = { .nl_family = AF_NETLINK };
+    if (sendto(sock, &req, req.nh.nlmsg_len, 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        perror("sendto");
+        close(sock);
+        return -1;
+    }
+
+    close(sock);
+	// 发送 netlink 请求
+    // send_netlink_request(&req.nh);
+    return 0;
+}
+
+/**
+ * @brief 获取接口的IP地址信息
+ * 
+ * @param ifname 接口名称
+ * @param ip_buf 用于存储IP地址的缓冲区
+ * @param family 地址族（AF_INET或AF_INET6）
+ * @return int 成功返回1，失败返回0
+ */
+int get_interface_ip(const char *ifname, char *ip_buf, int family) {
+    if (ifname == NULL || ip_buf == NULL) {
+        return 0;
+    }
+
+    int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (sock < 0) {
+        perror("socket");
+        return 0;
+    }
+	// 增加超时设置（在socket创建后立即设置）
+	struct timeval tv = {
+		.tv_sec = 2,  // 5秒超时
+		.tv_usec = 0
+	};
+	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+		perror("setsockopt");
+		close(sock);
+		return -1;
+	}
+
+    struct {
+        struct nlmsghdr nh;
+        struct ifaddrmsg ifa;
+    } req;
+
+    memset(&req, 0, sizeof(req));
+
+    // 初始化Netlink消息头
+    req.nh.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+    req.nh.nlmsg_type = RTM_GETADDR; // 获取地址信息
+    req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+
+    // 初始化ifaddrmsg
+    req.ifa.ifa_family = family; // AF_INET 或 AF_INET6
+    req.ifa.ifa_index = if_nametoindex(ifname); // 获取接口索引
+    if (!req.ifa.ifa_index) {
+        perror("if_nametoindex");
+        close(sock);
+        return 0;
+    }
+
+    // 发送Netlink消息
+    struct sockaddr_nl sa = { .nl_family = AF_NETLINK };
+    if (sendto(sock, &req, req.nh.nlmsg_len, 0, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        perror("sendto");
+        close(sock);
+        return 0;
+    }
+
+    // 接收响应
+    char buf[4096];
+    int len;
+    struct nlmsghdr *nlmsg;
+    struct ifaddrmsg *ifa;
+    struct rtattr *rta;
+    int rta_len;
+
+    while ((len = recv(sock, buf, sizeof(buf), 0)) > 0) {
+        for (nlmsg = (struct nlmsghdr *)buf; NLMSG_OK(nlmsg, len); nlmsg = NLMSG_NEXT(nlmsg, len)) {
+            if (nlmsg->nlmsg_type == NLMSG_DONE) {
+                break;
+            }
+            if (nlmsg->nlmsg_type == NLMSG_ERROR) {
+                struct nlmsgerr *err = (struct nlmsgerr *)NLMSG_DATA(nlmsg);
+                if (err->error) {
+                    fprintf(stderr, "Netlink error: %s\n", strerror(-err->error));
+                    close(sock);
+                    return 0;
+                }
+            }
+
+            ifa = (struct ifaddrmsg *)NLMSG_DATA(nlmsg);
+            if (ifa->ifa_family != family || ifa->ifa_index != req.ifa.ifa_index) {
+                continue;
+            }
+
+            rta = IFA_RTA(ifa);
+            rta_len = IFA_PAYLOAD(nlmsg);
+
+            for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
+                if (rta->rta_type == IFA_ADDRESS || rta->rta_type == IFA_LOCAL) {
+                    void *addr = RTA_DATA(rta);
+                    if (family == AF_INET) {
+                        struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+						//printf("ifname=%s(%d),%x, len=%d %d,%d\n", ifname, ifa->ifa_index, rta->rta_len, sin->sin_addr.s_addr, rta->rta_type, IFA_ADDRESS);
+                        inet_ntop(AF_INET, addr, ip_buf, INET_ADDRSTRLEN);
+                    } else if (family == AF_INET6) {
+                        struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
+                        inet_ntop(AF_INET6, sin6, ip_buf, INET6_ADDRSTRLEN);
+						//printf("ifname=%s(%d), len=%d %d,%d\n", ifname, ifa->ifa_index, rta->rta_len, rta->rta_type, IFA_ADDRESS);
+                    }
+                    close(sock);
+                    return 1;
+                }
+            }
+        }
+    }
+
+    if (len < 0) {
+        perror("recv");
+    }
+
+    close(sock);
+    return 0;
+}
+
 // 调用示例：添加优先级3、路由表eth1的规则
 //add_rule_table_priority(1001, 3);  // 假设 eth1 对应 table ID 1001
 

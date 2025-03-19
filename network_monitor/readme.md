@@ -123,6 +123,94 @@ inspur-itgw:/home/android #ip route show table sipa_eth0                        
 default dev sipa_eth0 proto static scope link mtu 1400
 10.154.55.231 dev sipa_eth0 proto static scope link
 
+# netlink 操作网络的类型：
+1. socket 类型 （socket(AF_NETLINK, SOCK_RAW, xxx);）
+可以到/include/uapi/linux/netlink.h头文件查看详细定义
+   1.1.NETLINK_ROUTE
+	NETLINK_ROUTE 不仅用于处理路由信息，还涵盖了与网络接口相关的地址配置（如添加、删除或修改IP地址）等。
+   
+   1.2. NETLINK_FIREWALL
+   用于防火墙相关的事件通知（已废弃）。
+   
+   1.3. NETLINK_SOCK_DIAG
+   用于套接字诊断，可以查询TCP/UDP等协议的连接状态。
+   1.4. NETLINK_XFRM
+   用于IPSec策略和状态管理。
+   1.5. NETLINK_SELINUX
+   用于SELinux事件的通知。
+   1.6. NETLINK_ISCSI
+   用于iSCSI协议的相关通信。
+   1.7. NETLINK_AUDIT
+   用于审计子系统的事件通知。
+   1.8. NETLINK_FIB_LOOKUP
+   用于FIB（Forwarding Information Base）查找请求。
+   1.9. NETLINK_CONNECTOR
+   通用通知机制，用于内核与用户空间之间的通信。
+   1.10. NETLINK_NETFILTER
+   用于netfilter框架的事件通知，例如iptables规则变化。
+   1.11. NETLINK_IP6_FW
+   用于IPv6防火墙事件通知（已废弃）。
+   1.12. NETLINK_DNRTMSG
+   用于DECnet路由消息。
+   1.13. NETLINK_KOBJECT_UEVENT
+   用于内核对象的用户空间事件通知。
+   1.14. NETLINK_GENERIC
+   通用Netlink类型，允许自定义消息格式和协议。
+   1.15. NETLINK_SCSITRANSPORT
+   用于SCSI传输层通信。
+   1.16. NETLINK_RDMA
+   用于RDMA（远程直接内存访问）相关通信。
+
+2.  Netlink 协议中，nlmsg_type 定义了消息的类型，用于指示 Netlink 消息的具体操作
+2.1. 链路（Link）相关类型
+这些类型用于处理网络接口（链路）的创建、删除和修改。
+
+RTM_NEWLINK: 创建一个新的网络接口。
+RTM_DELLINK: 删除一个网络接口。
+RTM_GETLINK: 获取网络接口的信息。
+RTM_SETLINK: 修改现有网络接口的属性。
+2.2. 地址（Address）相关类型
+这些类型用于处理 IP 地址的添加、删除和查询。
+
+RTM_NEWADDR: 添加一个新的 IP 地址到指定的网络接口。（如你在代码中使用的）
+RTM_DELADDR: 从指定的网络接口删除一个 IP 地址。
+RTM_GETADDR: 获取指定网络接口的 IP 地址信息。
+2.3. 路由（Route）相关类型
+这些类型用于处理路由表条目的添加、删除和查询。
+
+RTM_NEWROUTE: 添加一个新的路由条目到路由表。
+RTM_DELROUTE: 从路由表中删除一个路由条目。
+RTM_GETROUTE: 获取路由表中的路由条目。
+2.4. 规则（Rule）相关类型
+这些类型用于处理路由规则的添加、删除和查询。
+
+RTM_NEWRULE: 添加一个新的路由规则。
+RTM_DELRULE: 删除一个路由规则。
+RTM_GETRULE: 获取路由规则。
+2.5. 邻居（Neighbor/ARP）相关类型
+这些类型用于处理邻居表（如 ARP 表）的管理。
+
+RTM_NEWNEIGH: 添加一个新的邻居条目。
+RTM_DELNEIGH: 删除一个邻居条目。
+RTM_GETNEIGH: 获取邻居表中的条目。
+2.6. QoS 和流量控制（TC）相关类型
+这些类型用于处理 QoS 和流量控制的相关配置。
+
+RTM_NEWQDISC: 添加一个新的队列调度器。
+RTM_DELQDISC: 删除一个队列调度器。
+RTM_GETQDISC: 获取队列调度器的信息。
+RTM_NEWTCLASS: 添加一个新的流量类。
+RTM_DELTCLASS: 删除一个流量类。
+RTM_GETTCLASS: 获取流量类的信息。
+RTM_NEWTFILTER: 添加一个新的过滤器。
+RTM_DELTFILTER: 删除一个过滤器。
+RTM_GETTFILTER: 获取过滤器的信息。
+2.7. 其他类型
+NLMSG_NOOP: 空操作，表示消息被忽略。
+NLMSG_ERROR: 表示消息是一个错误响应。
+NLMSG_DONE: 表示消息序列结束。
+
+
 ——————————————————————————————————————————————————————————————————————————————
 
 # AI 生成信息

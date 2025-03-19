@@ -82,6 +82,9 @@ void get_rt_table_name(const unsigned int id, char *name);
 int init_route_table(route_entry_t *rt_items, int rt_len, int family);
 void add_rule_table_priority(int table, int priority);
 
+int get_interface_ip(const char *ifname, char *ip_buf, int family);
+int set_ip_address(const char *ifname, const char *ip, int prefix_len);
+
 // 调用示例：添加优先级3、路由表eth1的规则
 //add_rule_table_priority(1001, 3);  // 假设 eth1 对应 table ID 1001
 

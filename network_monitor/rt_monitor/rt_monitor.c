@@ -132,6 +132,29 @@ int main(int argc, char *argv[]) {
         }
     }
 
+	//testing:
+	// char ip_buf[INET6_ADDRSTRLEN] = {0};
+	// if (set_ip_address("docker0", "192.168.1.100", 24) == 0) {
+    //     printf("IP address set successfully.\n");
+    // } else {
+    //     printf("Failed to set IP address.\n");
+    // }
+
+    // if (get_interface_ip("docker0", ip_buf, AF_INET)) {
+    //     printf("IPv4 Address: %s\n", ip_buf);
+    // } else {
+    //     printf("Failed to get IPv4 address for enp0s3\n");
+    // }
+
+    // if (get_interface_ip("docker0", ip_buf, AF_INET6)) {
+    //     printf("IPv6 Address: %s\n", ip_buf);
+    // } else {
+    //     printf("Failed to get IPv6 address for enp0s3\n");
+    // }
+
+	// return 0;
+
+
 	cJSON *pJson = NULL;
 	FILE *fp = NULL;
 
